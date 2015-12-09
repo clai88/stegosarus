@@ -6,56 +6,6 @@ import signal
 from termcolor import colored
 
 
-# def complete_allfiles(self, text, line, begin_index, end_index):
-#     start_line = line[:end_index].rsplit(' ', 1)[1]
-#     end_line = line[end_index:].split(' ', 1)[0]
-#     full_line = start_line + end_line
-#     abs_path = os.path.abspath(os.path.expanduser(start_line))
-
-#     if not os.path.exists(abs_path):
-#         arr = abs_path.rsplit('/', 1)
-#         abs_path = arr[0]
-#         name = arr[1]
-#         listing = os.listdir(abs_path)
-
-#         complete_listing = []
-#         for item in listing:
-#             if os.path.isdir(os.path.join(abs_path, item)):
-#                 complete_listing.append(item + '/')
-#             else:
-#                 complete_listing.append(item)
-#         # dirs = [d for d in listing if os.path.isdir(
-#         #     os.path.join(abs_path, d))]
-#         # complete_dirs = [d + '/' for d in listing]
-#         return [item for item in complete_listing if item.startswith(name)]
-#     elif full_line.endswith('/'):
-#         listing = os.listdir(abs_path)
-#         # dirs = [item for item in listing if os.path.isdir(
-#         #     os.path.join(abs_path, item))]
-#         return listing
-
-# def complete_onlydirs(self, text, line, begin_index, end_index):
-#     start_line = line[:end_index].rsplit(' ', 1)[1]
-#     end_line = line[end_index:].split(' ', 1)[0]
-#     full_line = start_line + end_line
-#     abs_path = os.path.abspath(os.path.expanduser(start_line))
-
-#     if not os.path.exists(abs_path):
-#         arr = abs_path.rsplit('/', 1)
-#         abs_path = arr[0]
-#         name = arr[1]
-#         listing = os.listdir(abs_path)
-
-#         dirs = [d for d in listing if os.path.isdir(
-#             os.path.join(abs_path, d))]
-#         complete_dirs = [d + '/' for d in listing]
-#         return [item for item in complete_dirs if item.startswith(name)]
-#     elif full_line.endswith('/'):
-#         listing = os.listdir(abs_path)
-#         dirs = [item for item in listing if os.path.isdir(
-#             os.path.join(abs_path, item))]
-#         return dirs
-
 def run_add(in_file, out_file, value):
     if value < 0:
         raise ValueError("Value must be positive.")
@@ -264,6 +214,10 @@ class CmdRunner(cmd.Cmd):
         add_val = int(args[2], 16)
         run_add(args[0], args[1], add_val)
 
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+    # Passed commands through to the shell if unrecognized. #
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+
     def preloop(self):
         cmd.Cmd.preloop(self)  # sets up command completion
         self._hist = []  # No history yet
@@ -273,59 +227,9 @@ class CmdRunner(cmd.Cmd):
     def default(self, line):
         os.system(line)
 
-    # def do_clear(self, line):
-    #     os.system('clear')
-
-    # def do_pwd(self, line):
-    #     print(os.getcwd())
-
-    # def do_ls(self, line):
-    #     os.system('ls')
-
-    # def do_cd(self, line):
-    #     old_cwd = self.cwd
-    #     old_prev_cwd = self.prev_cwd
-
-    #     new_dir = line
-    #     first_chr = line[:1]
-
-    #     if line == '-':
-    #         tmp = self.prev_cwd
-    #         self.prev_cwd = self.cwd
-    #         self.cwd = tmp
-    #         new_dir = tmp
-    #     elif line == '':
-    #         self.cwd = '~'
-    #         new_dir = '~'
-    #     elif first_chr == '~' or first_chr == '/':
-    #         self.cwd = line
-    #     else:
-    #         self.cwd += '/' + line
-
-    #     try:
-    #         os.chdir(os.path.expanduser(new_dir))
-    #     except FileNotFoundError:
-    #         self.cwd = old_cwd
-    #         self.prev_cwd = old_prev_cwd
-    #         print(colored('No such file or directory: ' + line, 'red'))
-
-    # def complete_cd(self, text, line, begin_index, end_index):
-    #     true_text = line.split(' ', 1)[1]
-    #     abs_path = os.path.abspath(os.path.expanduser(true_text))
-
-    #     if not os.path.exists(abs_path):
-    #         arr = abs_path.rsplit('/', 1)
-    #         abs_path = arr[0]
-    #         name = arr[1]
-    #         listing = os.listdir(abs_path)
-    #         dirs = [d for d in listing if os.path.isdir(
-    #             os.path.join(abs_path, d))]
-    #         return [item for item in dirs if item.startswith(name)]
-    #     elif line.endswith('/'):
-    #         listing = os.listdir(abs_path)
-    #         dirs = [item for item in listing if os.path.isdir(
-    #             os.path.join(abs_path, item))]
-    #         return dirs
+    # %%%%%%%%% #
+    # END Shell #
+    # %%%%%%%%% #
 
     def do_exit(self, line):
         print(colored('Stopping...\n', 'yellow'))
