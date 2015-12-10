@@ -101,65 +101,77 @@ def run_xor(in_file, out_file, value):
     w_bytes(b, out_file)
 
 
-def auto_jpeg_xor(in_file, out_file):
+def run_auto_xor(in_file, out_file):
     """Returns true if successful.
     """
     b = r_bytes(in_file)
-    val = None
-    if len(b) > 10:
-        if b[4] != b[10]:
-            print(colored('Running auto XOR on jpeg failed.', 'red'))
-            return False
-        val = b[4]
 
-    print(colored('Running XOR with ' + hex(val) + '..', 'yellow'))
-    run_xor(in_file, out_file, val)
-    # if is_valid(out_file, 'jpeg'):
-    if is_valid(out_file)[0]:
-        print(colored('Image decoded.', 'green'))
+    valid = None
+    for i in range(256):
+        if i % 16 == 0:
+            print(colored((str(100 * i / 256) + '% done'), 'yellow'))
+        run_xor(in_file, out_file, i)
+        valid = is_valid(out_file)
+        if valid[0]:
+            print(colored('Found image by XOR with ' + hex(i) + '.', 'green'))
+            break
+
+    if valid[0]:
+        print(colored('Decoded ' + valid[1] + '.', 'green'))
     else:
-        print(colored('Running auto XOR on jpeg failed.', 'red'))
+        print(colored('Running XOR failed.', 'red'))
+    return valid[0]
 
-    return True
 
-
-def auto_jpeg_subtract(in_file, out_file):
-    """Returns true if successful
+def run_auto_shift(in_file, out_file):
+    """Returns true if successful.
     """
     b = r_bytes(in_file)
-    val = None
-    if len(b) > 10:
-        if b[4] != b[10]:
-            print(colored('Running auto SUBTRACT on jpeg failed.', 'red'))
-            return False
-        val = b[4]
 
-    print(colored('Running SUBTRACT with ' + hex(val) + '..', 'yellow'))
-    run_subtract(in_file, out_file, val)
-    if jpeg_valid(out_file):
-        print(colored('Image decoded.', 'green'))
+    valid = None
+    for i in range(256):
+        if i % 16 == 0:
+            print(colored((str(100 * i / 256) + '% done'), 'yellow'))
+        run_subtract(in_file, out_file, i)
+        valid = is_valid(out_file)
+        if valid[0]:
+            print(colored('Found image by SUBTRACTING with ' + hex(i) + '.',
+                          'green'))
+            break
+
+    if valid[0]:
+        print(colored('Decoded ' + valid[1] + '.', 'green'))
     else:
-        print(colored('Running auto SUBTRACT on jpeg failed.', 'red'))
+        print(colored('Running SUBTRACTING failed.', 'red'))
+    return valid[0]
 
-    return True
 
-
-def jpeg_valid(in_file):
+def run_lsb_bitmap(in_file, out_file, num_bits=1):
     b = r_bytes(in_file)
 
-    # Check the start sequence
-    start_correct = (
-        b[0] == 0xFF and
-        b[1] == 0xD8 and
-        b[2] == 0xFF and
-        b[3] == 0xE0)
+    out_bits = []
+    for byte in b:
+        out_bits.append(byte & (0xFF >> 8 - num_bits))
 
-    # Check the ending sequence
-    end_correct = (
-        b[len(b) - 2] == 0xFF and
-        b[len(b) - 1] == 0xD9)
+    out_bytes = []
 
-    return (start_correct and end_correct)
+    # Pad with 0 bits if needed
+    padded_bits = 0
+    while len(out_bytes) % 8 != 0:
+        padded_bits += 1
+        out_bytes.append(0)
+
+    if padded_bits != 0:
+        print(colored('Padded file with ' + padded_bits + ' zero bits.',
+                      'yellow'))
+
+    for bit_start in range(0, len(out_bits), 8):
+        byte = 0
+        for i in range(8):
+            byte += out_bits[bit_start + i] << 7 - i
+        out_bytes.append(byte)
+
+    w_bytes(bytearray(out_bytes), out_file)
 
 
 def fix_path(path):
@@ -245,11 +257,11 @@ class CmdRunner(cmd.Cmd):
             print()
             self.cmdloop()
 
-    def do_jpeg_xor(self, line):
+    def do_auto_xor(self, line):
         args = line.split(' ')
-        auto_jpeg_xor(fix_path(args[0]), fix_path(args[1]))
+        run_auto_xor(fix_path(args[0]), fix_path(args[1]))
 
-    def complete_jpeg_xor(self, text, line, begin_index, end_index):
+    def complete_auto_xor(self, text, line, begin_index, end_index):
         line_to_cursor = line[:end_index]
 
         start_line = line[:end_index].rsplit(' ', 1)[1]
@@ -274,7 +286,74 @@ class CmdRunner(cmd.Cmd):
                 else:
                     complete_listing.append(item)
             return [item for item in complete_listing if item.startswith(name)]
-        elif full_line.endswith('/'):
+        elif full_line.endswith('/') or full_line == '':
+            listing = os.listdir(abs_path)
+            return listing
+
+    def do_auto_shift(self, line):
+        args = line.split(' ')
+        run_auto_shift(fix_path(args[0]), fix_path(args[1]))
+
+    def complete_auto_shift(self, text, line, begin_index, end_index):
+        line_to_cursor = line[:end_index]
+
+        start_line = line[:end_index].rsplit(' ', 1)[1]
+        end_line = line[end_index:].split(' ', 1)[0]
+        full_line = start_line + end_line
+
+        if len(line_to_cursor.split(' ')) > 3:
+            return
+
+        abs_path = os.path.abspath(os.path.expanduser(start_line))
+
+        if not os.path.exists(abs_path):
+            arr = abs_path.rsplit('/', 1)
+            abs_path = arr[0]
+            name = arr[1]
+            listing = os.listdir(abs_path)
+
+            complete_listing = []
+            for item in listing:
+                if os.path.isdir(os.path.join(abs_path, item)):
+                    complete_listing.append(item + '/')
+                else:
+                    complete_listing.append(item)
+            return [item for item in complete_listing if item.startswith(name)]
+        elif full_line.endswith('/') or full_line == '':
+            listing = os.listdir(abs_path)
+            return listing
+
+    def do_lsb(self, line):
+        args = line.split(' ')
+        run_lsb_bitmap(fix_path(args[0]), fix_path(args[1]),
+                       num_bits=int(args[2]))
+
+    def complete_lsb(self, text, line, begin_index, end_index):
+        line_to_cursor = line[:end_index]
+
+        start_line = line[:end_index].rsplit(' ', 1)[1]
+        end_line = line[end_index:].split(' ', 1)[0]
+        full_line = start_line + end_line
+
+        if len(line_to_cursor.split(' ')) > 3:
+            return
+
+        abs_path = os.path.abspath(os.path.expanduser(start_line))
+
+        if not os.path.exists(abs_path):
+            arr = abs_path.rsplit('/', 1)
+            abs_path = arr[0]
+            name = arr[1]
+            listing = os.listdir(abs_path)
+
+            complete_listing = []
+            for item in listing:
+                if os.path.isdir(os.path.join(abs_path, item)):
+                    complete_listing.append(item + '/')
+                else:
+                    complete_listing.append(item)
+            return [item for item in complete_listing if item.startswith(name)]
+        elif full_line.endswith('/') or full_line == '':
             listing = os.listdir(abs_path)
             return listing
 
